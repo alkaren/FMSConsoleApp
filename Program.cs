@@ -7,7 +7,7 @@ class Program
     static void Main(string[] args)
     {
         // Dynamically determine the serial port name
-        string portName = FindSerialPort();
+        string portName = "/dev/ttyACM0"; //FindSerialPort();
 
         if (portName == null)
         {
