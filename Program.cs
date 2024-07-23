@@ -30,12 +30,30 @@ class Program
 
         var kafkaConfig = new ProducerConfig { BootstrapServers = "20.198.250.153:9092" };
         using var producer = new ProducerBuilder<Null, string>(kafkaConfig).Build();
+
         serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer);
 
-        serialPort.Open();
-        Console.WriteLine($"Serial port {portName} opened successfully. Waiting for GPS data...");
-        Console.WriteLine("Press any key to exit...");
-        Console.ReadKey();
+        try
+        {
+            serialPort.Open();
+            Console.WriteLine($"Serial port {portName} opened successfully. Waiting for GPS data...");
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
+            // Keep the console application running
+            while (true)
+            {
+                // Your application logic here
+                Thread.Sleep(1000); // to wait for data
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error opening serial port: " + ex.Message);
+        }
+        finally
+        {
+            serialPort.Close();
+        }
     }
 
     private static async void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e, IProducer<Null, string> producer)
