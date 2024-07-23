@@ -9,15 +9,31 @@ using System.Globalization;
 
 class Program
 {
+    static SerialPort serialPort;
     static async Task Main(string[] args)
     {
+        string portName = "/dev/ttyACM0"; //FindSerialPort();
+
+        if (portName == null)
+        {
+            Console.WriteLine("GPS receiver not detected. Exiting...");
+            return;
+        }
+
+        serialPort = new SerialPort();
+        serialPort.PortName = portName;
+        serialPort.BaudRate = 9600;    // GPS usually communicates at 9600 baud
+        serialPort.Parity = Parity.None;
+        serialPort.DataBits = 8;
+        serialPort.StopBits = StopBits.One;
+        serialPort.Handshake = Handshake.None;
+
         var kafkaConfig = new ProducerConfig { BootstrapServers = "20.198.250.153:9092" };
         using var producer = new ProducerBuilder<Null, string>(kafkaConfig).Build();
-
-        using SerialPort serialPort = new SerialPort("/dev/ttyACM0", 9600, Parity.None, 8, StopBits.One);
         serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer);
-        serialPort.Open();
 
+        serialPort.Open();
+        Console.WriteLine($"Serial port {portName} opened successfully. Waiting for GPS data...");
         Console.WriteLine("Press any key to exit...");
         Console.ReadKey();
     }
@@ -62,7 +78,7 @@ class Program
             {
                 if (String.IsNullOrEmpty(parts[2]) || String.IsNullOrEmpty(parts[4]))
                 {
-                    Console.WriteLine("LatLong Is NULL");
+                    Console.WriteLine("LatLong Is NULL," + " Date Time: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
                     return null;
                 }
                 // Extract latitude and longitude from the NMEA sentence
@@ -74,7 +90,7 @@ class Program
                 // Convert NMEA format to decimal degrees
                 double latitude = NmeaToDecimal(latitudeNmea, latDirection);
                 double longitude = NmeaToDecimal(longitudeNmea, lonDirection);
-                Console.WriteLine(latitude + " | " + longitude);
+                Console.WriteLine(latitude + ", " + longitude + " Date Time: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
 
                 // Output latitude and longitude in Google Maps compatible format
                 //Console.WriteLine($"Latitude: -{latitude.ToString("0.000000").Replace(",", ".")}");
