@@ -1,15 +1,16 @@
 using System;
 using System.IO.Ports;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Confluent.Kafka;
-using System.Collections.Generic;
-using System.Xml.Linq;
-using System.Globalization;
+using MongoDB.Driver;
+using MongoDB.Bson;
+using System.Net.NetworkInformation;
 
 class Program
 {
     static SerialPort serialPort;
+    const string connectionUri = "mongodb+srv://alkarenichsan03:lsxXv78aW5c6AVVK@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
     static async Task Main(string[] args)
     {
         string portName = "/dev/ttyACM0"; //FindSerialPort();
@@ -31,7 +32,12 @@ class Program
         var kafkaConfig = new ProducerConfig { BootstrapServers = "20.198.250.153:9092" };
         using var producer = new ProducerBuilder<Null, string>(kafkaConfig).Build();
 
-        serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer);
+
+        var settings = MongoClientSettings.FromConnectionString(connectionUri);
+        settings.ServerApi = new ServerApi(ServerApiVersion.V1);
+        var client = new MongoClient(settings);
+
+        serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer, client);
 
         try
         {
@@ -56,7 +62,7 @@ class Program
         }
     }
 
-    private static async void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e, IProducer<Null, string> producer)
+    private static async void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e, IProducer<Null, string> producer, MongoClient mongoClient)
     {
         SerialPort sp = (SerialPort)sender;
         string indata = sp.ReadLine();  // Read the data from the serial port
@@ -65,19 +71,41 @@ class Program
         if (gpsData != null)
         {
             var messageData = new Dictionary<string, object>
-            {
-                { "key", Guid.NewGuid().ToString() },
-                { "unitid", "TH0001" },
-                { "drivername", "Alkaren" },
-                { "driver", "https://drive.google.com/file/d/13DzMENEjMaGIo7FJDMHrnX-QOyH5RYcI/view" },
-                { "timestamp", DateTime.UtcNow.ToString("o") }, // ISO 8601 format
-                { "latitude", gpsData.Latitude },
-                { "longitude", gpsData.Longitude }
-            };
+                {
+                    { "key", Guid.NewGuid().ToString() },
+                    { "unitid", "TH0001" },
+                    { "drivername", "Alkaren" },
+                    { "driver", "https://drive.google.com/file/d/13DzMENEjMaGIo7FJDMHrnX-QOyH5RYcI/view" },
+                    { "timestamp", DateTime.UtcNow.ToString("o") }, // ISO 8601 format
+                    { "latitude", gpsData.Latitude },
+                    { "longitude", gpsData.Longitude }
+                };
 
-            string message = JsonSerializer.Serialize(messageData);
-            var result = await producer.ProduceAsync("test", new Message<Null, string> { Value = message });
-            Console.WriteLine($"Produced message to: {result.TopicPartitionOffset}");
+
+            if (CheckInternetConnection())
+            {
+                // Code to execute when there is an internet connection
+                Console.WriteLine("Connected to the internet");
+
+                string message = JsonSerializer.Serialize(messageData);
+                var result = await producer.ProduceAsync("test", new Message<Null, string> { Value = message });
+                Console.WriteLine($"Produced message to: {result.TopicPartitionOffset}");
+
+                var resultmongo = mongoClient.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
+                Console.WriteLine("Pinged your deployment. You successfully connected to MongoDB!");
+
+                // Get the database
+                var database = mongoClient.GetDatabase("FleetNav");
+                var collection = database.GetCollection<BsonDocument>("vehicle_data");
+                BsonDocument bsonDocument = BsonDocument.Parse(message);
+                await collection.InsertOneAsync(bsonDocument);
+                Console.WriteLine("Document inserted successfully.");
+            }
+            else
+            {
+                // Code to execute when there is no internet connection
+                Console.WriteLine("No internet connection");
+            }
         }
     }
 
@@ -110,15 +138,9 @@ class Program
                 double longitude = NmeaToDecimal(longitudeNmea, lonDirection);
                 Console.WriteLine(latitude + ", " + longitude + " Date Time: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
 
-                // Output latitude and longitude in Google Maps compatible format
-                //Console.WriteLine($"Latitude: -{latitude.ToString("0.000000").Replace(",", ".")}");
-                //Console.WriteLine($"Longitude: {longitude.ToString("0.000000").Replace(",", ".")}");
                 string googleMapsUrl = $"https://www.google.com/maps?q={latitude.ToString("0.000000").Replace(",", ".")},{longitude.ToString("0.000000").Replace(",", ".")}";
                 Console.WriteLine($"Google Maps URL: {googleMapsUrl}");
 
-                //double doubleValueLat = double.Parse(latitude.ToString("0.000000").Replace(",", "."));
-                //double doubleValueLong = double.Parse($"{longitude.ToString("0.000000").Replace(",", ".")}");
-                //Console.WriteLine($"{doubleValueLat}, {doubleValueLong}");
                 return new GpsData
                 {
                     Latitude = latitude,
@@ -157,6 +179,23 @@ class Program
 
         return decimalDegrees;
     }
+
+    static bool CheckInternetConnection()
+    {
+        try
+        {
+            using (var ping = new Ping())
+            {
+                var reply = ping.Send("www.google.com");
+                return reply.Status == IPStatus.Success;
+            }
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
 }
 
 public class GpsData
