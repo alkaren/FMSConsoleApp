@@ -10,7 +10,7 @@ class Program
 {
     static SerialPort serialPort;
     //const string connectionUri = "mongodb+srv://alkarenichsan03:lsxXv78aW5c6AVVK@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-    const string connectionUri = "mongodb+srv://alkarenichsan03:alka123qweasd@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+    const string connectionUri = "mongodb+srv://alkarenichsan03:alka123qweasd@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&connectTimeoutMS=60000&appName=Cluster0";
 
 
     static async Task Main(string[] args)
