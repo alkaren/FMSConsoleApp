@@ -42,18 +42,17 @@ class Program
         using var producer = new ProducerBuilder<Null, string>(kafkaConfig).Build();
 
         //serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer, client);
-        serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer);
+        //serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer);
 
         try
         {
             serialPort.Open();
             Console.WriteLine($"Serial port {portName} opened successfully. Waiting for GPS data...");
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
             // Keep the console application running
             while (true)
             {
                 // Your application logic here
+                DataReceivedHandler(serialPort, producer);
                 Thread.Sleep(1000); // to wait for data
             }
         }
@@ -67,9 +66,9 @@ class Program
         }
     }
 
-    private static async void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e, IProducer<Null, string> producer)
+    private static async void DataReceivedHandler(SerialPort sp, IProducer<Null, string> producer)
     {
-        SerialPort sp = (SerialPort)sender;
+        //SerialPort sp = (SerialPort)sender;
         string indata = sp.ReadLine();  // Read the data from the serial port
         var gpsData = ParseGpsData(indata);
 
@@ -81,35 +80,16 @@ class Program
                     { "unitid", "TH0001" },
                     { "drivername", "Alkaren" },
                     { "driver", "https://drive.google.com/file/d/13DzMENEjMaGIo7FJDMHrnX-QOyH5RYcI/view" },
-                    { "timestamp", DateTime.UtcNow.ToString("o") }, // ISO 8601 format
+                    { "timestamp", DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm:ss") }, // ISO 8601 format
                     { "latitude", gpsData.Latitude },
                     { "longitude", gpsData.Longitude }
                 };
 
 
-            if (CheckInternetConnection())
-            {
-                // Code to execute when there is an internet connection
-                Console.WriteLine("Connected to the internet");
+            string message = JsonSerializer.Serialize(messageData);
+            var result = await producer.ProduceAsync("test", new Message<Null, string> { Value = message });
+            Console.WriteLine($"Produced message to: {result.TopicPartitionOffset}");
 
-                string message = JsonSerializer.Serialize(messageData);
-                var result = await producer.ProduceAsync("test", new Message<Null, string> { Value = message });
-                Console.WriteLine($"Produced message to: {result.TopicPartitionOffset}");
-
-
-
-                // Get the database
-                //var database = mongoClient.GetDatabase("FleetNav");
-                //var collection = database.GetCollection<BsonDocument>("vehicle_data");
-                //BsonDocument bsonDocument = BsonDocument.Parse(message);
-                //await collection.InsertOneAsync(bsonDocument);
-                //Console.WriteLine("Document inserted successfully.");
-            }
-            else
-            {
-                // Code to execute when there is no internet connection
-                Console.WriteLine("No internet connection");
-            }
         }
     }
 
