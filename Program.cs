@@ -9,11 +9,21 @@ using System.Net.NetworkInformation;
 class Program
 {
     static SerialPort serialPort;
-    const string connectionUri = "mongodb+srv://alkarenichsan03:lsxXv78aW5c6AVVK@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+    //const string connectionUri = "mongodb+srv://alkarenichsan03:lsxXv78aW5c6AVVK@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+    const string connectionUri = "mongodb+srv://alkarenichsan03:alka123qweasd@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
 
     static async Task Main(string[] args)
     {
+        var settings = MongoClientSettings.FromConnectionString(connectionUri);
+        settings.ServerApi = new ServerApi(ServerApiVersion.V1);
+        var client = new MongoClient(settings);
+
+        var result = client.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
+        Console.WriteLine("Pinged your deployment. You successfully connected to MongoDB!");
+
         string portName = "/dev/ttyACM0"; //FindSerialPort();
+        //string portName = "COM5"; //FindSerialPort();
 
         if (portName == null)
         {
@@ -31,11 +41,6 @@ class Program
 
         var kafkaConfig = new ProducerConfig { BootstrapServers = "20.198.250.153:9092" };
         using var producer = new ProducerBuilder<Null, string>(kafkaConfig).Build();
-
-
-        var settings = MongoClientSettings.FromConnectionString(connectionUri);
-        settings.ServerApi = new ServerApi(ServerApiVersion.V1);
-        var client = new MongoClient(settings);
 
         serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer, client);
 
@@ -91,8 +96,7 @@ class Program
                 var result = await producer.ProduceAsync("test", new Message<Null, string> { Value = message });
                 Console.WriteLine($"Produced message to: {result.TopicPartitionOffset}");
 
-                var resultmongo = mongoClient.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
-                Console.WriteLine("Pinged your deployment. You successfully connected to MongoDB!");
+
 
                 // Get the database
                 var database = mongoClient.GetDatabase("FleetNav");
