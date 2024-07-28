@@ -9,20 +9,19 @@ using System.Net.NetworkInformation;
 class Program
 {
     static SerialPort serialPort;
-    //const string connectionUri = "mongodb+srv://alkarenichsan03:lsxXv78aW5c6AVVK@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-    const string connectionUri = "mongodb+srv://alkarenichsan03:alka123qweasd@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&connectTimeoutMS=60000&appName=Cluster0";
+    //const string connectionUri = "mongodb+srv://alkarenichsan03:alka123qweasd@cluster0.z85ja0e.mongodb.net/?retryWrites=true&w=majority&connectTimeoutMS=60000&appName=Cluster0";
 
 
     static async Task Main(string[] args)
     {
-        var settings = MongoClientSettings.FromConnectionString(connectionUri);
-        settings.ServerApi = new ServerApi(ServerApiVersion.V1);
-        var client = new MongoClient(settings);
+        //var settings = MongoClientSettings.FromConnectionString(connectionUri);
+        //settings.ServerApi = new ServerApi(ServerApiVersion.V1);
+        //var client = new MongoClient(settings);
 
-        var result = client.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
-        Console.WriteLine("Pinged your deployment. You successfully connected to MongoDB!");
+        //var result = client.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
+        //Console.WriteLine("Pinged your deployment. You successfully connected to MongoDB!");
 
-        string portName = "/dev/ttyACM0"; //FindSerialPort();
+        string portName = "COM5"; //FindSerialPort();
         //string portName = "COM5"; //FindSerialPort();
 
         if (portName == null)
@@ -42,7 +41,8 @@ class Program
         var kafkaConfig = new ProducerConfig { BootstrapServers = "20.198.250.153:9092" };
         using var producer = new ProducerBuilder<Null, string>(kafkaConfig).Build();
 
-        serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer, client);
+        //serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer, client);
+        serialPort.DataReceived += (sender, e) => DataReceivedHandler(sender, e, producer);
 
         try
         {
@@ -67,7 +67,7 @@ class Program
         }
     }
 
-    private static async void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e, IProducer<Null, string> producer, MongoClient mongoClient)
+    private static async void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e, IProducer<Null, string> producer)
     {
         SerialPort sp = (SerialPort)sender;
         string indata = sp.ReadLine();  // Read the data from the serial port
@@ -99,11 +99,11 @@ class Program
 
 
                 // Get the database
-                var database = mongoClient.GetDatabase("FleetNav");
-                var collection = database.GetCollection<BsonDocument>("vehicle_data");
-                BsonDocument bsonDocument = BsonDocument.Parse(message);
-                await collection.InsertOneAsync(bsonDocument);
-                Console.WriteLine("Document inserted successfully.");
+                //var database = mongoClient.GetDatabase("FleetNav");
+                //var collection = database.GetCollection<BsonDocument>("vehicle_data");
+                //BsonDocument bsonDocument = BsonDocument.Parse(message);
+                //await collection.InsertOneAsync(bsonDocument);
+                //Console.WriteLine("Document inserted successfully.");
             }
             else
             {
