@@ -21,7 +21,7 @@ class Program
         //var result = client.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
         //Console.WriteLine("Pinged your deployment. You successfully connected to MongoDB!");
 
-        string portName = "COM5"; //FindSerialPort();
+        string portName = "/dev/ttyACM0"; //FindSerialPort();
         //string portName = "COM5"; //FindSerialPort();
 
         if (portName == null)
