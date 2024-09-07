@@ -32,7 +32,7 @@ class Program
 
         serialPort = new SerialPort();
         serialPort.PortName = portName;
-        serialPort.BaudRate = 9600;    // GPS usually communicates at 9600 baud
+        serialPort.BaudRate = 38400;    // GPS usually communicates at 9600 baud
         serialPort.Parity = Parity.None;
         serialPort.DataBits = 8;
         serialPort.StopBits = StopBits.One;
